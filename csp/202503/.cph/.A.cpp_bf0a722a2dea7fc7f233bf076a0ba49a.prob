@@ -1,1 +1,0 @@
-{"name":"Local: A","url":"c:\\Users\\Adr\\Desktop\\cf\\csp\\202503\\A.cpp","tests":[{"id":1764809860851,"input":"1 2 0 5\n","output":"64\n"},{"id":1764809867939,"input":"-20 -20 1 1000\n","output":"324294000\n"}],"interactive":false,"memoryLimit":1024,"timeLimit":3000,"srcPath":"c:\\Users\\Adr\\Desktop\\cf\\csp\\202503\\A.cpp","group":"local","local":true}
