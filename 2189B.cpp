@@ -85,7 +85,7 @@ void inni(){
     memset(ci, 0, sizeof(ci));
     memset(cnt, 0, sizeof(cnt));
     //memset(di, 0, sizeof(di));
-    di =
+    di = 0;
     sum = 0;
 }
 
