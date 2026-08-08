@@ -17,17 +17,17 @@ void solve(){
         cin >> fa[i];
     }
 
-    int time = 10;
-    while(time--){
+    // int time = 10;
+    // while(time--){
         for(int i = 2; i <= n; i++){
             b[fa[i]] += a[i] + b[i];
             b[i] = 0;
         }
-        cout << b[1] << endl;
-    }
+    //     cout << b[1] << endl;
+    // }
 
 
-    cout << "  " << sum - a[1] << endl;
+    // cout << "  " << sum - a[1] << endl;
 
     if(sum - a[1] == 0){
         for(int i = 2; i <= n; i++){
@@ -57,6 +57,8 @@ void solve(){
 }
 
 signed main(){
+    ios::sync_with_stdio(false);
+    cin.tie(0);
     int t;
     cin >> t;
     while(t--){
