@@ -1,12 +1,17 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-bool solve(){
-    vector<int> t(16, 0);
-    vector<bool>    b(16, false);
-    
-    
-    
+int t[16];
+bool b[16];
+
+//初始化
+void ini(){
+    memset(t, 0, sizeof(t));
+    memset(b, 0, sizeof(b));
+}
+
+//输入
+void inp(){
     for(int i = 0; i < 33; i++){
         char tmp;
         cin >> tmp;
@@ -21,45 +26,26 @@ bool solve(){
         else{
             t[tmp-'0'-2]++;
         }
-        //cout << tmp;
+        
     }
+}
 
-    // for(int i = 1; i <= 15; i++){
-    //     cout << "t[" << i << "] = " << t[i] << endl;
-    // }
-
-    //枚举农民的最大炸弹
-    int farmer = 0;
-
-    if(t[14] == 0 && t[15] == 0){
-        farmer = 14;
-    }
-    else{
-        for(int i = 13; i >= 1; i--){
-            if(t[i] <= 4){
-                farmer = i;
-                break;
-            }
+//在当前的出炸弹情况为b[i]情况下，判断
+bool judge(){
+    int cntelse = 0;
+    vector<int> index[16];
+    vector<int> m(10, 0);
+    for(int i = 1; i <= 15; i++){
+        if(!b[i]){
+            if(t[i] != 0){
+                m[t[i]]++; 
+                index[t[i]].push_back(i);
+                cntelse++;}
         }
     }
 
-    cout << "farmer max " << farmer << endl;
 
-    for(int i = 14; i >= farmer; i--){
-        //判断
-        int cntelse = 0;
-        vector<int> index[16];
-        vector<int> m(10, 0);
-        for(int i = 1; i <= 15; i++){
-            if(!b[i]){
-                if(t[i] != 0){
-                    m[t[i]]++; 
-                    index[t[i]].push_back(i);
-                    cntelse++;}
-            }
-        }
-
-        if(m[1] != 0){
+    if(m[1] != 0){
             if(m[1] == 1)   {
                 ///单张
                 if(cntelse == 1)    return true;
@@ -196,6 +182,54 @@ bool solve(){
             b[i] = 0;
         }
     }
+
+}
+
+
+bool 
+
+bool solve(){
+    ini();
+    
+    
+    
+
+
+    // for(int i = 1; i <= 15; i++){
+    //     cout << "t[" << i << "] = " << t[i] << endl;
+    // }
+
+    //农民的最大炸弹
+    int farmer = 0;
+
+    if(t[14] == 0 && t[15] == 0){
+        farmer = 14;
+    }
+    else{
+        for(int i = 13; i >= 1; i--){
+            if(t[i] <= 4){
+                farmer = i;
+                break;
+            }
+        }
+    }
+
+    cout << "farmer max " << farmer << endl;
+
+    //枚举不同的b[i]
+    for(int i = )
+
+
+
+
+
+
+
+    for(int i = 14; i >= farmer; i--){
+        //判断
+
+
+        
     
     
 
