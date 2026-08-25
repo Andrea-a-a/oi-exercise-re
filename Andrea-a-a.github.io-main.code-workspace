@@ -1,10 +1,10 @@
 {
 	"folders": [
 		{
-			"path": "../Andrea-a-a.github.io-main"
+			"path": "."
 		},
 		{
-			"path": "."
+			"path": "../Andrea-a-a.github.io"
 		}
 	],
 	"settings": {}
