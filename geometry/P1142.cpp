@@ -4,6 +4,7 @@ using namespace std;
 /*************************** 浮点数精度控制 ***************************/
 const double eps = 1e-8;
 const double PI = acos(-1.0);
+const double INF = 1e30; // 代表无穷大，用于竖直直线
 
 // 浮点数符号判断：-1 负数，0 零，1 正数
 int sgn(double x) {
@@ -18,16 +19,16 @@ struct Point {
     Point(double _x, double _y) : x(_x), y(_y) {}
 
     // 向量加减、数乘
-    Point operator + (const Point &b) const { return Point(x + b.x, y + b.y); }
-    Point operator - (const Point &b) const { return Point(x - b.x, y - b.y); }
-    Point operator * (double k) const { return Point(x * k, y * k); }
-    Point operator / (double k) const { return Point(x / k, y / k); }
+    Point operator+(const Point &b) const { return Point(x + b.x, y + b.y); }
+    Point operator-(const Point &b) const { return Point(x - b.x, y - b.y); }
+    Point operator*(double k) const { return Point(x * k, y * k); }
+    Point operator/(double k) const { return Point(x / k, y / k); }
 
     // 比较运算符（用于排序、去重）
-    bool operator == (const Point &b) const {
+    bool operator==(const Point &b) const {
         return sgn(x - b.x) == 0 && sgn(y - b.y) == 0;
     }
-    bool operator < (const Point &b) const {
+    bool operator<(const Point &b) const {
         return sgn(x - b.x) == 0 ? sgn(y - b.y) < 0 : x < b.x;
     }
 };
@@ -76,6 +77,13 @@ double dist(Point a, Point b) {
     return len(a - b);
 }
 
+// 计算两点连线斜率，若直线竖直（dx=0）则返回 INF
+double slope(Point a, Point b) {
+    double dx = a.x - b.x;
+    if (sgn(dx) == 0) return INF; // 竖直
+    return (a.y - b.y) / dx;
+}
+
 // 判断点 C 在直线 AB 的哪一侧
 // cross(B-A, C-A) > 0 => C 在 AB 左侧；< 0 => 右侧；= 0 => 在直线上[reference:4]
 int pointSide(Point A, Point B, Point C) {
@@ -104,7 +112,7 @@ double pointToSegment(Point P, Point A, Point B) {
 
 /*************************** 线段相交判断 ***************************/
 
-// 快速排斥实验 + 跨立实验[reference:6]
+// 快速排斥实验 + 跨立实验
 bool segmentIntersect(Point A, Point B, Point C, Point D) {
     // 快速排斥实验：以线段为对角线的矩形是否相交
     if (max(A.x, B.x) < min(C.x, D.x) + eps ||
@@ -164,3 +172,35 @@ int pointInPolygon(Point P, vector<Point> &p) {
     return inside ? 1 : 0;
 }
 
+int main() {
+
+    int n;
+    cin >> n;
+    vector<Point> p;
+    for (int i = 0; i < n; i++) {
+        int x, y;
+        cin >> x >> y;
+        p.push_back({x, y});
+    }
+    int ans = 1;
+    for (int i = 0; i < n; i++) {
+        vector<double> k;
+        for (int j = i + 1; j < n; j++) {
+            k.push_back(slope(p[i], p[j]));
+        }
+        sort(k.begin(), k.end());
+        int cur = 1;
+        int s = k.size();
+        for (int i = 1; i < s; i++) {
+            if (k[i] == k[i - 1]) {
+                cur++;
+                ans = max(cur, ans);
+            } else {
+                cur = 1;
+            }
+        }
+    }
+
+    cout << ans+1;
+    return 0;
+}

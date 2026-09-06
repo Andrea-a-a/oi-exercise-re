@@ -4,6 +4,7 @@ using namespace std;
 /*************************** 浮点数精度控制 ***************************/
 const double eps = 1e-8;
 const double PI = acos(-1.0);
+const double INF = 1e30; // 代表无穷大，用于竖直直线
 
 // 浮点数符号判断：-1 负数，0 零，1 正数
 int sgn(double x) {
@@ -18,16 +19,16 @@ struct Point {
     Point(double _x, double _y) : x(_x), y(_y) {}
 
     // 向量加减、数乘
-    Point operator + (const Point &b) const { return Point(x + b.x, y + b.y); }
-    Point operator - (const Point &b) const { return Point(x - b.x, y - b.y); }
-    Point operator * (double k) const { return Point(x * k, y * k); }
-    Point operator / (double k) const { return Point(x / k, y / k); }
+    Point operator+(const Point &b) const { return Point(x + b.x, y + b.y); }
+    Point operator-(const Point &b) const { return Point(x - b.x, y - b.y); }
+    Point operator*(double k) const { return Point(x * k, y * k); }
+    Point operator/(double k) const { return Point(x / k, y / k); }
 
     // 比较运算符（用于排序、去重）
-    bool operator == (const Point &b) const {
+    bool operator==(const Point &b) const {
         return sgn(x - b.x) == 0 && sgn(y - b.y) == 0;
     }
-    bool operator < (const Point &b) const {
+    bool operator<(const Point &b) const {
         return sgn(x - b.x) == 0 ? sgn(y - b.y) < 0 : x < b.x;
     }
 };
@@ -69,11 +70,47 @@ Vector normal(Vector a) {
     return Point(-a.y / l, a.x / l);
 }
 
+
+/*************************** 垂直与对称关系 ***************************/
+
+// 判断两个向量是否垂直（点积为零）
+bool isVertical(Vector a, Vector b) {
+    return sgn(dot(a, b)) == 0;
+}
+
+// 判断两条线段（或直线）AB 与 CD 是否垂直（重载）
+// 直接复用向量版本，传入各自的方向向量
+bool isVertical(Point A, Point B, Point C, Point D) {
+    return isVertical(B - A, D - C);
+}
+
+// 求点 P 在直线 AB 上的投影点（垂足）
+// 若 A == B（直线退化），则返回 A
+Point projection(Point P, Point A, Point B) {
+    if (A == B) return A;
+    Vector v = B - A;
+    double t = dot(P - A, v) / dot(v, v); // 投影系数
+    return A + v * t;
+}
+
+// 求点 P 关于直线 AB 的对称点（镜像点）
+Point reflection(Point P, Point A, Point B) {
+    Point foot = projection(P, A, B);
+    return foot * 2 - P;
+}
+
 /*************************** 点 / 线段 / 直线 ***************************/
 
 // 两点距离
 double dist(Point a, Point b) {
     return len(a - b);
+}
+
+// 计算两点连线斜率，若直线竖直（dx=0）则返回 INF
+double slope(Point a, Point b) {
+    double dx = a.x - b.x;
+    if (sgn(dx) == 0) return INF; // 竖直
+    return (a.y - b.y) / dx;
 }
 
 // 判断点 C 在直线 AB 的哪一侧
@@ -104,7 +141,7 @@ double pointToSegment(Point P, Point A, Point B) {
 
 /*************************** 线段相交判断 ***************************/
 
-// 快速排斥实验 + 跨立实验[reference:6]
+// 快速排斥实验 + 实验: AB和CD不相交
 bool segmentIntersect(Point A, Point B, Point C, Point D) {
     // 快速排斥实验：以线段为对角线的矩形是否相交
     if (max(A.x, B.x) < min(C.x, D.x) + eps ||
@@ -126,9 +163,11 @@ Point getLineIntersection(Point P, Vector v, Point Q, Vector w) {
     return P + v * t;
 }
 
+
+
 /*************************** 多边形 ***************************/
 
-// 多边形面积（顶点按顺时针或逆时针顺序排列）[reference:8]
+// 多边形面积（顶点按顺时针或逆时针顺序排列）
 double polygonArea(vector<Point> &p) {
     double area = 0;
     int n = p.size();
@@ -139,7 +178,7 @@ double polygonArea(vector<Point> &p) {
     return fabs(area) / 2.0;
 }
 
-// 多边形周长
+// 多边形周长（顶点按你想要的顺序排列）
 double polygonPerimeter(vector<Point> &p) {
     double per = 0;
     int n = p.size();
@@ -164,3 +203,162 @@ int pointInPolygon(Point P, vector<Point> &p) {
     return inside ? 1 : 0;
 }
 
+/*************************** 极角排序 ***************************/
+
+// 返回点 p 相对于原点的象限（1~4），原点返回 0
+// 象限定义：从 x 正半轴逆时针旋转，[0, π/2) 为1，[π/2, π) 为2，[π, 3π/2) 为3，[3π/2, 2π) 为4
+int quad(const Point& p) {
+    if (sgn(p.x) > 0 && sgn(p.y) >= 0) return 1;
+    if (sgn(p.x) <= 0 && sgn(p.y) > 0) return 2;
+    if (sgn(p.x) < 0 && sgn(p.y) <= 0) return 3;
+    if (sgn(p.x) >= 0 && sgn(p.y) < 0) return 4;
+    return 0; // 原点
+}
+
+// 极角比较器（相对于原点），按极角从小到大排序，极角相同时按到原点距离从小到大
+bool polarCmp(const Point& a, const Point& b) {
+    int qa = quad(a), qb = quad(b);
+    if (qa != qb) return qa < qb;
+    int c = cross(a, b);
+    if (c != 0) return c > 0; // a 在 b 逆时针方向，则 a 角度小
+    return len(a) < len(b);   // 共线时距离近的在前
+}
+
+// 极角比较器（相对于指定点 o）
+// 用法：sort(pts.begin(), pts.end(), [&](const Point& a, const Point& b) { return polarCmp(o, a, b); });
+bool polarCmp(const Point& o, const Point& a, const Point& b) {
+    Vector va = a - o, vb = b - o;
+    int qa = quad(va), qb = quad(vb);
+    if (qa != qb) return qa < qb;
+    int c = cross(va, vb);
+    if (c != 0) return c > 0;
+    return len(va) < len(vb);
+}
+
+/*************************** 凸包 ***************************/
+
+// Andrew 算法求凸包（逆时针顺序，去除共线点）
+// 输入：点集 p（可含重复点、内部点）
+// 输出：凸包顶点数组（逆时针顺序），不含共线中间点
+// 如果要求不去重的话，把判断里的<= 0 改成 <
+vector<Point> convexHull(vector<Point> p) {
+    int n = p.size();
+    if (n <= 1) return p;
+
+    sort(p.begin(), p.end()); // 按 x 升序，x 相同按 y 升序
+
+    vector<Point> hull;
+    hull.reserve(n * 2);
+
+    // 构建下凸壳：从左到右，维护逆时针转向
+    for (int i = 0; i < n; i++) {
+        while (hull.size() >= 2 &&
+               sgn(cross(hull[hull.size()-1] - hull[hull.size()-2], p[i] - hull[hull.size()-1])) <= 0) {
+            hull.pop_back();
+        }
+        hull.push_back(p[i]);
+    }
+
+    // 构建上凸壳：从右到左，跳过已使用的点
+    int lower = hull.size();
+    for (int i = n - 2; i >= 0; i--) {
+        while (hull.size() > lower &&
+               sgn(cross(hull[hull.size()-1] - hull[hull.size()-2], p[i] - hull[hull.size()-1])) <= 0) {
+            hull.pop_back();
+        }
+        hull.push_back(p[i]);
+    }
+
+    // 删除重复的起点（末尾与开头相同）
+    hull.pop_back();
+    return hull;
+}
+
+
+/*************************** 闵可夫斯基和 ***************************/
+
+// 计算两个凸包的闵可夫斯基和
+// 要求：a 和 b 必须为逆时针顺序的凸包，且起点为最左下角的点（即 y 最小，y 相同时 x 最小）
+// 时间复杂度 O(n + m)
+vector<Point> minkowskiSum(const vector<Point> &a, const vector<Point> &b) {
+    int n = (int)a.size(), m = (int)b.size();
+    if (n == 0 || m == 0) return {};
+
+    // 特判：如果某个凸包只有一个点
+    if (n == 1) {
+        vector<Point> res;
+        for (auto p : b)
+            res.push_back(p + a[0]);
+        return res;
+    }
+    if (m == 1) {
+        vector<Point> res;
+        for (auto p : a)
+            res.push_back(p + b[0]);
+        return res;
+    }
+
+    // 1. 提取两个凸包的所有边向量
+    vector<Vector> edges;
+    edges.reserve(n + m);
+
+    // 从凸包 a 中提取边向量 (a[i+1] - a[i])
+    for (int i = 0; i < n; i++) {
+        int j = (i + 1) % n;
+        edges.push_back(a[j] - a[i]);
+    }
+    // 从凸包 b 中提取边向量 (b[i+1] - b[i])
+    for (int i = 0; i < m; i++) {
+        int j = (i + 1) % m;
+        edges.push_back(b[j] - b[i]);
+    }
+
+    // 2. 对所有边向量按极角排序 (使用叉积比较)
+    // 排序规则：先按象限排序，再按叉积正负排序，使得向量按逆时针顺序排列
+    sort(edges.begin(), edges.end(), [](const Vector &u, const Vector &v) {
+        // 上半平面优先 (y > 0 或 y == 0 && x > 0)
+        bool left_u = (u.y > 0 || (u.y == 0 && u.x > 0));
+        bool left_v = (v.y > 0 || (v.y == 0 && v.x > 0));
+        if (left_u != left_v) return left_u > left_v;
+        // 叉积大于0 表示 u 在 v 的逆时针方向
+        return cross(u, v) > 0;
+    });
+
+    // 3. 去重：去除共线的向量 (方向相同或相反的向量)
+    // 注意：这里保留第一个向量，跳过后续与之共线的向量
+    vector<Vector> unique_edges;
+    for (auto e : edges) {
+        if (unique_edges.empty()) {
+            unique_edges.push_back(e);
+        } else {
+            // 如果当前向量与上一个向量共线，则合并 (只保留一个)
+            // 使用叉积判断是否共线，点积判断是否同向
+            if (sgn(cross(unique_edges.back(), e)) == 0 && sgn(dot(unique_edges.back(), e)) > 0) {
+                // 共线且同向，跳过
+                continue;
+            } else {
+                unique_edges.push_back(e);
+            }
+        }
+    }
+
+    // 4. 从起始点开始，依次加上所有边向量，构建闵可夫斯基和的凸包
+    // 起始点选择两个凸包最左下角的点之和
+    Point start = a[0] + b[0]; // 确保 a[0] 和 b[0] 是最左下角的点
+    vector<Point> res;
+    res.reserve(unique_edges.size() + 1);
+    res.push_back(start);
+
+    Point cur = start;
+    for (auto e : unique_edges) {
+        cur = cur + e;
+        res.push_back(cur);
+    }
+
+    // 5. 移除最后一个点（它会与起点重合）
+    if (res.size() > 1 && res.back() == res[0]) {
+        res.pop_back();
+    }
+
+    return res;
+}
