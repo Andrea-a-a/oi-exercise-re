@@ -36,6 +36,24 @@ struct Point {
 // 用 Vector 别名表示向量，与 Point 本质相同
 typedef Point Vector;
 
+/*************************** 直线 / 圆 ***************************/
+
+// 直线（点向式）：点 p + 方向向量 v
+struct Line {
+    Point p;
+    Vector v;
+    Line() {}
+    Line(Point _p, Vector _v) : p(_p), v(_v) {}
+};
+
+// 圆
+struct Circle {
+    Point o;
+    double r;
+    Circle() {}
+    Circle(Point _o, double _r) : o(_o), r(_r) {}
+};
+
 /*************************** 向量基本运算 ***************************/
 
 // 点积 Dot Product: |a||b|cosθ
@@ -69,7 +87,6 @@ Vector normal(Vector a) {
     double l = len(a);
     return Point(-a.y / l, a.x / l);
 }
-
 
 /*************************** 垂直与对称关系 ***************************/
 
@@ -163,8 +180,6 @@ Point getLineIntersection(Point P, Vector v, Point Q, Vector w) {
     return P + v * t;
 }
 
-
-
 /*************************** 多边形 ***************************/
 
 // 多边形面积（顶点按顺时针或逆时针顺序排列）
@@ -207,7 +222,7 @@ int pointInPolygon(Point P, vector<Point> &p) {
 
 // 返回点 p 相对于原点的象限（1~4），原点返回 0
 // 象限定义：从 x 正半轴逆时针旋转，[0, π/2) 为1，[π/2, π) 为2，[π, 3π/2) 为3，[3π/2, 2π) 为4
-int quad(const Point& p) {
+int quad(const Point &p) {
     if (sgn(p.x) > 0 && sgn(p.y) >= 0) return 1;
     if (sgn(p.x) <= 0 && sgn(p.y) > 0) return 2;
     if (sgn(p.x) < 0 && sgn(p.y) <= 0) return 3;
@@ -216,7 +231,7 @@ int quad(const Point& p) {
 }
 
 // 极角比较器（相对于原点），按极角从小到大排序，极角相同时按到原点距离从小到大
-bool polarCmp(const Point& a, const Point& b) {
+bool polarCmp(const Point &a, const Point &b) {
     int qa = quad(a), qb = quad(b);
     if (qa != qb) return qa < qb;
     int c = cross(a, b);
@@ -226,7 +241,7 @@ bool polarCmp(const Point& a, const Point& b) {
 
 // 极角比较器（相对于指定点 o）
 // 用法：sort(pts.begin(), pts.end(), [&](const Point& a, const Point& b) { return polarCmp(o, a, b); });
-bool polarCmp(const Point& o, const Point& a, const Point& b) {
+bool polarCmp(const Point &o, const Point &a, const Point &b) {
     Vector va = a - o, vb = b - o;
     int qa = quad(va), qb = quad(vb);
     if (qa != qb) return qa < qb;
@@ -253,7 +268,7 @@ vector<Point> convexHull(vector<Point> p) {
     // 构建下凸壳：从左到右，维护逆时针转向
     for (int i = 0; i < n; i++) {
         while (hull.size() >= 2 &&
-               sgn(cross(hull[hull.size()-1] - hull[hull.size()-2], p[i] - hull[hull.size()-1])) <= 0) {
+               sgn(cross(hull[hull.size() - 1] - hull[hull.size() - 2], p[i] - hull[hull.size() - 1])) <= 0) {
             hull.pop_back();
         }
         hull.push_back(p[i]);
@@ -263,7 +278,7 @@ vector<Point> convexHull(vector<Point> p) {
     int lower = hull.size();
     for (int i = n - 2; i >= 0; i--) {
         while (hull.size() > lower &&
-               sgn(cross(hull[hull.size()-1] - hull[hull.size()-2], p[i] - hull[hull.size()-1])) <= 0) {
+               sgn(cross(hull[hull.size() - 1] - hull[hull.size() - 2], p[i] - hull[hull.size() - 1])) <= 0) {
             hull.pop_back();
         }
         hull.push_back(p[i]);
@@ -273,7 +288,6 @@ vector<Point> convexHull(vector<Point> p) {
     hull.pop_back();
     return hull;
 }
-
 
 /*************************** 闵可夫斯基和 ***************************/
 
@@ -362,3 +376,315 @@ vector<Point> minkowskiSum(const vector<Point> &a, const vector<Point> &b) {
 
     return res;
 }
+
+/*************************** 旋转卡壳 ***************************/
+
+// 计算凸包直径（最远点对距离），hull 必须为逆时针严格凸，无共线点
+double convexDiameter(const vector<Point> &hull) {
+    int n = hull.size();
+    if (n == 1) return 0;
+    if (n == 2) return dist(hull[0], hull[1]);
+
+    double ans = 0;
+    for (int i = 0, j = 1; i < n; i++) {
+        // 寻找对踵点：当 (hull[i+1]-hull[i]) 与 (hull[j+1]-hull[j]) 叉积最大时
+        while (sgn(cross(hull[(i + 1) % n] - hull[i], hull[(j + 1) % n] - hull[j])) > 0)
+            j = (j + 1) % n;
+        ans = max(ans, dist(hull[i], hull[j]));
+        ans = max(ans, dist(hull[(i + 1) % n], hull[j]));
+    }
+    return ans;
+}
+
+// 计算凸包内最大三角形面积（hull 必须为逆时针严格凸）
+double maxTriangleArea(const vector<Point> &hull) {
+    int n = hull.size();
+    if (n < 3) return 0;
+    double ans = 0;
+    for (int i = 0; i < n; i++) {
+        int k = (i + 1) % n;
+        for (int j = (i + 1) % n; j != i; j = (j + 1) % n) {
+            while (sgn(cross(hull[(k + 1) % n] - hull[i], hull[j] - hull[i]) -
+                       cross(hull[k] - hull[i], hull[j] - hull[i])) > 0)
+                k = (k + 1) % n;
+            ans = max(ans, fabs(cross(hull[j] - hull[i], hull[k] - hull[i])) / 2.0);
+        }
+    }
+    return ans;
+}
+
+/*************************** 半平面交 ***************************/
+
+// 极角比较器（用于 Line 排序），按方向向量 v 的极角从小到大
+bool lineAngleCmp(const Line &a, const Line &b) {
+    int qa = quad(a.v), qb = quad(b.v);
+    if (qa != qb) return qa < qb;
+    int c = cross(a.v, b.v);
+    if (c != 0) return c > 0;              // 角度更小
+    return sgn(cross(b.v, a.p - b.p)) > 0; // 平行时保留左边
+}
+
+// 求两条直线的交点（已保证不平行）
+Point lineIntersection(const Line &a, const Line &b) {
+    Vector u = a.p - b.p;
+    double t = cross(b.v, u) / cross(a.v, b.v);
+    return a.p + a.v * t;
+}
+
+// 半平面交（所有半平面左侧为有效区域），返回交点多边形（逆时针）
+vector<Point> halfPlaneIntersection(vector<Line> lines) {
+    const double INF = 1e30;
+    // 添加四个边界（防止交点为无穷大），可选，视题目而定
+    // lines.push_back(Line(Point(-INF, -INF), Vector(1, 0)));
+    // lines.push_back(Line(Point(INF, -INF), Vector(0, 1)));
+    // lines.push_back(Line(Point(INF, INF), Vector(-1, 0)));
+    // lines.push_back(Line(Point(-INF, INF), Vector(0, -1)));
+
+    sort(lines.begin(), lines.end(), lineAngleCmp);
+
+    deque<Line> dq;
+    deque<Point> pts; // 存储相邻交点
+    for (auto &l : lines) {
+        while (!pts.empty() && sgn(cross(l.v, pts.back() - l.p)) <= 0) {
+            pts.pop_back();
+            dq.pop_back();
+        }
+        while (!pts.empty() && sgn(cross(l.v, pts.front() - l.p)) <= 0) {
+            pts.pop_front();
+            dq.pop_front();
+        }
+        if (!dq.empty() && sgn(cross(dq.back().v, l.v)) == 0) {
+            // 平行且同向，取更靠左的
+            if (sgn(cross(l.v, dq.back().p - l.p)) > 0)
+                continue;
+            else
+                return vector<Point>(); // 空集
+        }
+        if (!dq.empty()) pts.push_back(lineIntersection(dq.back(), l));
+        dq.push_back(l);
+    }
+    // 处理首尾
+    while (!pts.empty() && sgn(cross(dq.front().v, pts.back() - dq.front().p)) <= 0) {
+        pts.pop_back();
+        dq.pop_back();
+    }
+    while (!pts.empty() && sgn(cross(dq.back().v, pts.front() - dq.back().p)) <= 0) {
+        pts.pop_front();
+        dq.pop_front();
+    }
+    if (dq.size() <= 2) return vector<Point>(); // 空或点/线
+
+    // 重新计算交点
+    pts.clear();
+    for (int i = 0; i < (int)dq.size(); i++) {
+        int j = (i + 1) % dq.size();
+        pts.push_back(lineIntersection(dq[i], dq[j]));
+    }
+    // 去重（可选）
+    vector<Point> res;
+    for (auto &p : pts) {
+        if (res.empty() || !(res.back() == p)) res.push_back(p);
+    }
+    if (!res.empty() && res.front() == res.back()) res.pop_back();
+    return res;
+}
+
+/*************************** 扫描线（矩形面积并） ***************************/
+
+struct Rect {
+    double x1, y1, x2, y2; // 左下、右上
+};
+
+// 线段树节点（用于扫描线）
+struct SegNode {
+    int cnt;    // 覆盖次数
+    double len; // 覆盖总长度
+};
+
+vector<double> ys; // 离散化后的 y 坐标
+
+void pushup(int u, int l, int r, vector<SegNode> &tree) {
+    if (tree[u].cnt > 0)
+        tree[u].len = ys[r] - ys[l];
+    else if (l + 1 == r)
+        tree[u].len = 0;
+    else
+        tree[u].len = tree[u << 1].len + tree[u << 1 | 1].len;
+}
+
+void update(int u, int l, int r, int ql, int qr, int val, vector<SegNode> &tree) {
+    if (ql <= l && r <= qr) {
+        tree[u].cnt += val;
+        pushup(u, l, r, tree);
+        return;
+    }
+    int mid = (l + r) >> 1;
+    if (ql < mid) update(u << 1, l, mid, ql, qr, val, tree);
+    if (qr > mid) update(u << 1 | 1, mid, r, ql, qr, val, tree);
+    pushup(u, l, r, tree);
+}
+
+double rectangleUnion(vector<Rect> rects) {
+    struct Event {
+        double x, y1, y2;
+        int type; // 1 入边，-1 出边
+        bool operator<(const Event &e) const { return x < e.x; }
+    };
+    vector<Event> events;
+    ys.clear();
+    for (auto &r : rects) {
+        events.push_back({r.x1, r.y1, r.y2, 1});
+        events.push_back({r.x2, r.y1, r.y2, -1});
+        ys.push_back(r.y1);
+        ys.push_back(r.y2);
+    }
+    sort(events.begin(), events.end());
+    sort(ys.begin(), ys.end());
+    ys.erase(unique(ys.begin(), ys.end()), ys.end());
+    int m = ys.size();
+    vector<SegNode> tree(4 * m + 5);
+    double ans = 0;
+    for (int i = 0; i < (int)events.size() - 1; i++) {
+        int l = lower_bound(ys.begin(), ys.end(), events[i].y1) - ys.begin();
+        int r = lower_bound(ys.begin(), ys.end(), events[i].y2) - ys.begin();
+        update(1, 0, m - 1, l, r, events[i].type, tree);
+        ans += (events[i + 1].x - events[i].x) * tree[1].len;
+    }
+    return ans;
+}
+
+/*************************** 三角剖分（凸多边形） ***************************/
+
+// 将凸多边形（逆时针）剖分为三角形，返回三角形列表（三个顶点）
+vector<array<Point, 3>> triangulateConvex(const vector<Point> &poly) {
+    vector<array<Point, 3>> tris;
+    int n = poly.size();
+    if (n < 3) return tris;
+    for (int i = 1; i < n - 1; i++) {
+        tris.push_back({poly[0], poly[i], poly[i + 1]});
+    }
+    return tris;
+}
+
+/*************************** 最小圆覆盖（随机增量法） ***************************/
+
+// 判断点是否在圆内或上
+bool inCircle(const Point &p, const Circle &c) {
+    return sgn(dist(p, c.o) - c.r) <= 0;
+}
+
+// 由两点确定圆（直径）
+Circle circleFromTwoPoints(const Point &a, const Point &b) {
+    Point o = (a + b) / 2.0;
+    return Circle(o, dist(a, b) / 2.0);
+}
+
+// 由三点确定圆（外接圆）
+Circle circleFromThreePoints(const Point &a, const Point &b, const Point &c) {
+    // 中垂线求交点
+    Vector v1 = b - a, v2 = c - a;
+    double d1 = dot(v1, v1), d2 = dot(v2, v2), d = 2 * cross(v1, v2);
+    if (sgn(d) == 0) return Circle(Point(0, 0), 0); // 共线，不会发生
+    double ux = (v2.y * d1 - v1.y * d2) / d;
+    double uy = (v1.x * d2 - v2.x * d1) / d;
+    Point o = a + Point(ux, uy);
+    return Circle(o, dist(o, a));
+}
+
+Circle minEnclosingCircle(vector<Point> pts) {
+    random_shuffle(pts.begin(), pts.end());
+    Circle c(Point(0, 0), 0);
+    int n = pts.size();
+    for (int i = 0; i < n; i++) {
+        if (!inCircle(pts[i], c)) {
+            c = Circle(pts[i], 0);
+            for (int j = 0; j < i; j++) {
+                if (!inCircle(pts[j], c)) {
+                    c = circleFromTwoPoints(pts[i], pts[j]);
+                    for (int k = 0; k < j; k++) {
+                        if (!inCircle(pts[k], c)) {
+                            c = circleFromThreePoints(pts[i], pts[j], pts[k]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return c;
+}
+
+double normAng(double ang) {
+    while (ang < 0)
+        ang += 2 * PI;
+    while (ang >= 2 * PI)
+        ang -= 2 * PI;
+    return ang;
+}
+
+double normAngPi(double ang) {
+    while (ang < -PI)
+        ang += 2 * PI;
+    while (ang >= PI)
+        ang -= 2 * PI;
+    return ang;
+}
+
+
+//平面最近点对
+
+// merge [l, r)
+double merg(long long l, long long r, vector<Point> &a) {
+    // cerr << "trying merge [ " << l << ", " << r << " );\n";
+    if (r == l + 1 || r <= l) return 1e19;
+    if (r == l + 2) {
+        // cerr << "merged type 1 [ " << l << " , " << r << " ) , dist = " << dist(a[l], a[l + 1]) << endl;
+        return dist(a[l], a[l + 1]);
+    }
+    long long mid = (l + r) / 2;
+    double minlen = min(merg(l, mid, a), merg(mid, r, a));
+    // 假设左右的最小已给出
+    long long midx = a[mid - 1].x;
+    // 对于[midx-minlen, midx+minlen]...
+
+    // cout << "  minlen: " << minlen << "  midx : " << midx << endl;
+
+    vector<Point> b;
+    for (int i = l; i < r; i++) {
+        if (a[i].x >= midx - minlen && a[i].x <= midx + minlen) {
+            b.push_back(a[i]);
+        }
+    }
+    sort(b.begin(), b.end(), [](Point w, Point e) { return w.y > e.y; });
+
+    int s = b.size();
+    for (int i = 0; i < s; i++) {
+        for (int j = i + 1; j < s && b[j].y >= b[i].y - minlen; j++) {
+            if (b[j].x < midx) continue;
+            minlen = min(minlen, dist(b[i], b[j]));
+        }
+    }
+
+    // cerr << "merged type 2 [ " << l << " , " << r << " ) , dist = " << minlen << endl;
+    return minlen;
+}
+
+int main() {
+    // input
+    int n;
+    vector<Point> p;
+    cin >> n;
+    int w = n;
+
+    while (n--) {
+        long long x, y;
+        cin >> x >> y;
+        p.push_back({x, y});
+    }
+
+    sort(p.begin(), p.end());
+
+    cout << std::fixed << std::setprecision(4) << merg(0, w, p);
+    return 0;
+}
+
+
