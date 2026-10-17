@@ -629,62 +629,46 @@ double normAngPi(double ang) {
     return ang;
 }
 
+/*************************** 平面最近点对 ***************************/
 
-//平面最近点对
+// 分治求最近点对（区间为 [l, r)，调用前需保证 pts 已按 x 升序排序）
+double closestPairRec(vector<Point> &pts, int l, int r) {
+    if (r - l <= 1) return INF;                 // 0 或 1 个点
+    if (r - l == 2) return dist(pts[l], pts[l + 1]);
 
-// merge [l, r)
-double merg(long long l, long long r, vector<Point> &a) {
-    // cerr << "trying merge [ " << l << ", " << r << " );\n";
-    if (r == l + 1 || r <= l) return 1e19;
-    if (r == l + 2) {
-        // cerr << "merged type 1 [ " << l << " , " << r << " ) , dist = " << dist(a[l], a[l + 1]) << endl;
-        return dist(a[l], a[l + 1]);
-    }
-    long long mid = (l + r) / 2;
-    double minlen = min(merg(l, mid, a), merg(mid, r, a));
-    // 假设左右的最小已给出
-    long long midx = a[mid - 1].x;
-    // 对于[midx-minlen, midx+minlen]...
+    int mid = (l + r) >> 1;
+    double midx = pts[mid].x;
 
-    // cout << "  minlen: " << minlen << "  midx : " << midx << endl;
+    // 左右两半分别求最近距离
+    double d = min(closestPairRec(pts, l, mid),
+                   closestPairRec(pts, mid, r));
 
-    vector<Point> b;
+    // 取出跨越中线的候选点：x 落在 [midx - d, midx + d] 内
+    vector<Point> strip;
+    strip.reserve(r - l);
     for (int i = l; i < r; i++) {
-        if (a[i].x >= midx - minlen && a[i].x <= midx + minlen) {
-            b.push_back(a[i]);
-        }
+        if (fabs(pts[i].x - midx) < d) strip.push_back(pts[i]);
     }
-    sort(b.begin(), b.end(), [](Point w, Point e) { return w.y > e.y; });
 
-    int s = b.size();
+    // 按 y 坐标升序排序
+    sort(strip.begin(), strip.end(),
+         [](const Point &a, const Point &b) { return a.y < b.y; });
+
+    // 每个点只需与后面 y 差值小于 d 的点比较（最多常数个）
+    int s = strip.size();
     for (int i = 0; i < s; i++) {
-        for (int j = i + 1; j < s && b[j].y >= b[i].y - minlen; j++) {
-            if (b[j].x < midx) continue;
-            minlen = min(minlen, dist(b[i], b[j]));
+        for (int j = i + 1; j < s && strip[j].y - strip[i].y < d; j++) {
+            d = min(d, dist(strip[i], strip[j]));
         }
     }
-
-    // cerr << "merged type 2 [ " << l << " , " << r << " ) , dist = " << minlen << endl;
-    return minlen;
+    return d;
 }
 
-int main() {
-    // input
-    int n;
-    vector<Point> p;
-    cin >> n;
-    int w = n;
-
-    while (n--) {
-        long long x, y;
-        cin >> x >> y;
-        p.push_back({x, y});
-    }
-
-    sort(p.begin(), p.end());
-
-    cout << std::fixed << std::setprecision(4) << merg(0, w, p);
-    return 0;
+// 接口：传入点集，内部先按 x 排序
+double closestPair(vector<Point> pts) {
+    if (pts.size() < 2) return INF;
+    sort(pts.begin(), pts.end());
+    return closestPairRec(pts, 0, (int)pts.size());
 }
 
 
