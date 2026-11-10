@@ -7,26 +7,31 @@ using namespace std;
 int n, m;
 vector<int> w;
 
-void dfs(int i, int k) {
-    if (i == n) {
-        if (k != m) return;
+void dfs(int i) {
+    //cout << "dfsing: " << i << " " << k << endl;
+    if (i == m) {
+        //if (k != m) return;
         // cout << "k: "  << k << endl;
         for (auto u : w) {
-            cout << setw(3) << u + 1;
+            cout << u  << " ";
         }
         cout << endl;
         return;
     }
-    w.push_back(i);
-    dfs(i + 1, k + 1);
-    w.pop_back();
 
-    dfs(i + 1, k);
+    for(int z = 1; z <= n; z++){
+        w.push_back(z);
+        dfs(i + 1);
+        w.pop_back();
+    }
+
+
+    // dfs(i + 1, k);
 }
 
 int main() {
 
-    cin >> n >> m;
+    cin >> m >> n;
 
-    dfs(0, 0);
+    dfs(0);
 }
