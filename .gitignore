@@ -70,3 +70,6 @@ Testing/
 .cph/
 .vscode/
 *.code-workspace
+
+# Problem Notes
+notes/
